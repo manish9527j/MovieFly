@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MovieFly - Ultimate</title>
+    
+    <!-- TailwindCSS and Fonts from New Design -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    
+    <style type="text/tailwindcss">
+        :root {
+            --background-color: #121212;
+            --text-color: #ffffff;
+            --gradient-start: #FF512F;
+            --gradient-end: #DD2476;
+            --nav-bg: rgba(0, 0, 0, 0.8);
+            --nav-border: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+        .text-gradient {
+            background: linear-gradient(90deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bottom-nav {
+            background: var(--nav-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid var(--nav-border);
+        }
+        .movie-poster-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .movie-poster-container .movie-trailer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0;
+            transition: opacity 0.5s ease; z-index: 1;
+        }
+        .movie-poster-container:hover .movie-trailer { opacity: 1; }
+        .movie-poster-container .movie-poster { transition: opacity 0.5s ease; }
+        .movie-poster-container:hover .movie-poster { opacity: 0; }
+        .poster-overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+            padding: 1rem; display: flex; align-items: flex-end;
+            z-index: 3; transition: opacity 0.3s ease;
+        }
+        .play-button {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px; height: 50px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 4; backdrop-filter: blur(5px);
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .movie-poster-container:hover .play-button { opacity: 1; }
+        .active-nav-item { color: var(--gradient-start); }
+        .fade-in { animation: fadeIn 1s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .scroll-container::-webkit-scrollbar { display: none; }
+        .scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Original Overlay and Splash Screen CSS (Adapted) */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--background-color);
+            z-index: 99999; display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+        }
+        #splash-screen.hidden { opacity: 0; visibility: hidden; }
+        .splash-logo { font-size: 48px; font-weight: bold; background: linear-gradient(90deg, var(--gradient-start) 0%, var(--gradient-end) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: pulse 1.5s infinite ease-in-out; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #121217; z-index: 1001; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); display: flex; flex-direction: column; }
+        .overlay.show { transform: translateY(0); }
+        .overlay-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #2b2b36; background-color: #121217; }
+        .overlay-header h2 { font-size: 1.25rem; font-weight: bold; }
+        .close-btn { background: rgba(40,40,40,0.8); border: none; color: white; font-size: 20px; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; line-height: 36px; text-align: center; }
+        .overlay-content { flex-grow: 1; overflow-y: auto; padding: 1.5rem; color: #ffffff; background-color: #121217; }
+        
+        /* Details Overlay Specific Styles (from original) */
+        .details-hero { position: relative; width: 100%; height: 50vh; background-size: cover; background-repeat: no-repeat; background-position: center top; background-color: #222; }
+        .details-hero::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, #121217 20%, transparent); }
+        .details-main-content { transform: translateY(-80px); padding: 0 1.5rem; position: relative; z-index: 2; }
+        .details-main-content h2 { font-size: 2rem; margin: 0 0 1rem; }
+        .details-meta-info p { margin: 4px 0; font-size: 14px; line-height: 1.5; color: #a0a0a0; }
+        .details-meta-info p strong { color: #ffffff; font-weight: 500; }
+        .details-section-title { font-size: 1.2rem; color: #ffffff; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem;}
+        .screenshot-container { display: flex; overflow-x: auto; gap: 15px; padding: 5px 0; scrollbar-width: none; scroll-snap-type: x mandatory; }
+        .screenshot-container::-webkit-scrollbar { display: none; }
+        .screenshot-container img { width: 85vw; height: auto; max-height: 50vh; border-radius: 8px; object-fit: contain; scroll-snap-align: start; flex-shrink: 0; background-color: #000; }
+        #downloads-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+        .quality-icon-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #2a2a2a; color: #ffffff; text-decoration: none; padding: 1rem; border-radius: 8px; border: 1px solid #444; transition: all 0.2s; gap: 0.5rem; }
+        .quality-icon-btn:hover { background-color: var(--gradient-start); }
+
+        /* Settings page styles (from original) */
+         .settings-item, .settings-item-static { display: flex; align-items: center; padding: 18px 15px; background-color: #2a2a2a; border-radius: 8px; margin-bottom: 12px; }
+        .settings-item { cursor: pointer; transition: background-color 0.2s; }
+        .settings-item:hover { background-color: #3c3c3c; }
+        .settings-item .material-icons, .settings-item-static .material-icons { font-size: 24px; margin-right: 20px; width: 25px; text-align: center; color: #a0a0a0; }
+        .settings-item span, .settings-item-static span { font-size: 1rem; }
+        .settings-item-static { color: #a0a0a0; }
+        .privacy-policy-list { padding-left: 20px; }
+        .privacy-policy-list li { margin-bottom: 15px; line-height: 1.6; }
+    </style>
+</head>
+<body class="bg-black">
+    <div id="splash-screen">
+        <div class="splash-logo">MovieFly</div>
+    </div>
+
+    <div id="app-container" class="container mx-auto px-4 pt-6 pb-24 fade-in hidden">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">Movie<span class="text-gradient">Fly</span></h1>
+            <div class="flex items-center space-x-4">
+                <button class="text-white" id="watchlist-btn-top">
+                    <span class="material-icons text-3xl">bookmark_border</span>
+                </button>
+                <button class="text-white" id="search-btn-top">
+                    <span class="material-icons text-3xl">search</span>
+                </button>
+            </div>
+        </header>
+        <main id="main-content">
+            <!-- Dynamic content will be loaded here by JavaScript -->
+        </main>
+    </div>
+
+    <!-- Overlays -->
+    <div id="details-overlay" class="overlay"></div>
+    <div id="search-overlay" class="overlay"></div>
+    <div id="settings-overlay" class="overlay"></div>
+    <div id="request-overlay" class="overlay"></div>
+    <div id="watchlist-overlay" class="overlay"></div>
+    <div id="about-overlay" class="overlay"></div>
+    <div id="privacy-overlay" class="overlay"></div>
+
+    <!-- Bottom Navigation from Code 1 -->
+    <nav class="fixed bottom-0 left-0 right-0 h-20 bottom-nav z-[1000]">
+        <div class="flex justify-around items-center h-full max-w-lg mx-auto">
+            <button class="nav-item flex flex-col items-center text-center text-gray-400 active-nav-item" data-action="home">
+                <span class="material-icons">home</span>
+                <span class="text-xs font-medium">Home</span>
+            </button>
+            <button class="nav-item flex flex-col items-center text-center text-gray-400 hover:text-white transition-colors" data-action="movies">
+                <span class="material-icons">movie</span>
+                <span class="text-xs font-medium">Movies</span>
+            </button>
+            <button class="nav-item flex flex-col items-center text-center text-gray-400 hover:text-white transition-colors" data-action="series">
+                <span class="material-icons">tv</span>
+                <span class="text-xs font-medium">Series</span>
+            </button>
+            <button class="nav-item flex flex-col items-center text-center text-gray-400 hover:text-white transition-colors" data-action="categories">
+                <span class="material-icons">widgets</span>
+                <span class="text-xs font-medium">Categories</span>
+            </button>
+            <button class="nav-item flex flex-col items-center text-center text-gray-400 hover:text-white transition-colors" data-action="settings">
+                <span class="material-icons">settings</span>
+                <span class="text-xs font-medium">Settings</span>
+            </button>
+        </div>
+    </nav>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjIg-GUxnvnZ9vMeLrFCtr-qpgyLjqQ24",
+            authDomain: "moviefly-5eec0.firebaseapp.com",
+            projectId: "moviefly-5eec0",
+            storageBucket: "moviefly-5eec0.firebasestorage.app",
+            messagingSenderId: "967876821772",
+            appId: "1:967876821772:web:a1cdb080fdeb9a8cf33f29",
+            measurementId: "G-XLMRR97EBN"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const mainContent = document.getElementById('main-content');
+        const ALL_OVERLAYS = ['details-overlay', 'search-overlay', 'settings-overlay', 'request-overlay', 'watchlist-overlay', 'about-overlay', 'privacy-overlay'];
+        let allContent = [];
+
+        // --- Watchlist Management ---
+        const WATCHLIST_KEY = 'movieFlyWatchlist';
+        const getWatchlist = () => JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]');
+        const isMovieInWatchlist = (movieId) => getWatchlist().includes(movieId);
+        const toggleWatchlist = (movieId) => {
+            let list = getWatchlist();
+            if (list.includes(movieId)) {
+                list = list.filter(id => id !== movieId);
+            } else {
+                list.unshift(movieId);
+            }
+            localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list.slice(0, 100)));
+            updateWatchlistIcons(movieId);
+        };
+        const updateWatchlistIcons = (movieId) => {
+            const inWatchlist = isMovieInWatchlist(movieId);
+            document.querySelectorAll(`.watchlist-btn[data-movie-id="${movieId}"]`).forEach(button => {
+                const icon = button.querySelector('.material-icons');
+                icon.textContent = inWatchlist ? 'bookmark_added' : 'bookmark_add';
+                icon.style.color = inWatchlist ? 'var(--gradient-start)' : 'white';
+            });
+        };
+        
+        const extractImageUrl = (htmlOrUrl) => {
+            if (typeof htmlOrUrl !== 'string') return 'https://via.placeholder.com/300x450.png?text=No+Image';
+            const trimmed = htmlOrUrl.trim();
+            if (trimmed.startsWith('<')) {
+                const match = trimmed.match(/src=["'](.*?)["']/);
+                return match ? match[1] : 'https://via.placeholder.com/300x450.png?text=No+Image';
+            }
+            return trimmed || 'https://via.placeholder.com/300x450.png?text=No+Image';
+        };
+        const safe = (str) => str || '';
+        
+        const cleanMovieTitle = (title) => {
+            if (!title) return "Untitled";
+            let cleanedTitle = title.split(/[\(\[\|-]/)[0].trim();
+            const junkKeywordsRegex = /\b(full movie|hindi dubbed|web series|dual audio)\b/gi;
+            cleanedTitle = cleanedTitle.replace(junkKeywordsRegex, '').trim();
+            if (cleanedTitle.length < 2) {
+                return title.split(/[\(\[\|-]/)[0].trim() || title;
+            }
+            return cleanedTitle;
+        };
+        
+        // --- Core Rendering (New Design) ---
+        const createMovieCard = (content) => {
+            const posterSrc = extractImageUrl(content.posterUrl);
+            const inWatchlist = isMovieInWatchlist(content.id);
+            const cleanedName = cleanMovieTitle(safe(content.name));
+            const cardHtml = `
+                <div class="flex-shrink-0 w-48 h-72 movie-poster-container group" data-movie-id="${content.id}">
+                    <img alt="${cleanedName}" class="w-full h-full object-cover movie-poster" src="${posterSrc}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450.png?text=Error';">
+                    <video class="movie-trailer" loop muted playsinline src=""></video> <!-- Trailer src can be added later -->
+                    <button class="watchlist-btn absolute top-2 right-2 z-10 p-2 bg-black bg-opacity-50 rounded-full" data-movie-id="${content.id}">
+                        <span class="material-icons text-white" style="color: ${inWatchlist ? 'var(--gradient-start)' : 'white'};">${inWatchlist ? 'bookmark_added' : 'bookmark_add'}</span>
+                    </button>
+                    <div class="play-button">
+                        <span class="material-icons text-white text-4xl">play_arrow</span>
+                    </div>
+                    <div class="poster-overlay">
+                        <h3 class="text-white font-semibold text-lg">${cleanedName}</h3>
+                    </div>
+                </div>
+            `;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cardHtml;
+            return tempDiv.firstElementChild;
+        };
+
+        const createCarousel = (title, contentList) => {
+            if (!contentList || contentList.length === 0) return document.createDocumentFragment();
+            const section = document.createElement('section');
+            section.className = 'mb-10';
+            section.innerHTML = `<h2 class="text-2xl font-semibold text-white mb-4">${title}</h2>`;
+            
+            const container = document.createElement('div');
+            container.className = 'flex space-x-6 overflow-x-auto pb-4 scroll-container';
+            contentList.forEach(content => container.appendChild(createMovieCard(content)));
+            section.appendChild(container);
+            return section;
+        };
+        
+        const buildHomepageFeed = () => {
+            mainContent.innerHTML = ''; // Clear previous content
+            const sortedContent = [...allContent].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+            
+            mainContent.appendChild(createCarousel('Recently Added', sortedContent.slice(0, 20)));
+            ["Bollywood", "Hollywood", "South", "Anime", "Korean", "Gujarati"].forEach(category => {
+                const categoryContent = sortedContent.filter(c => c.category === category);
+                if (categoryContent.length > 0) {
+                   mainContent.appendChild(createCarousel(category, categoryContent));
+                }
+            });
+        };
+        
+        const renderGridView = (title, contentList, targetElement = mainContent) => {
+            targetElement.innerHTML = `<h2 class="text-2xl font-semibold text-white mb-4">${title}</h2>`;
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4';
+            
+            if (contentList && contentList.length > 0) {
+                contentList.forEach(content => {
+                    const card = createMovieCard(content);
+                    card.classList.remove('w-48', 'h-72', 'flex-shrink-0');
+                    card.classList.add('w-full', 'aspect-[2/3]');
+                    grid.appendChild(card);
+                });
+            } else {
+                grid.innerHTML = '<p class="col-span-full text-center text-gray-400 mt-8">Nothing to show here.</p>';
+            }
+            targetElement.appendChild(grid);
+        };
+
+        // --- Overlay & Navigation Logic ---
+        const openOverlay = (id) => {
+            const overlay = document.getElementById(id);
+            if (overlay) {
+                overlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                history.pushState({ overlay: id }, `Showing ${id}`);
+            }
+        };
+        const closeOverlay = (id) => {
+            const overlay = document.getElementById(id);
+            if (overlay && overlay.classList.contains('show')) {
+                overlay.classList.remove('show');
+                if (!ALL_OVERLAYS.some(oid => document.getElementById(oid)?.classList.contains('show'))) {
+                    document.body.style.overflow = 'auto';
+                }
+            }
+        };
+        
+        window.addEventListener('popstate', (event) => {
+            ALL_OVERLAYS.forEach(closeOverlay);
+        });
+
+        const buildAndShowOverlay = (id, title, content, showHeader = true) => {
+            const overlay = document.getElementById(id);
+            if(!overlay) return;
+            const headerHtml = showHeader ? `<div class="overlay-header"><h2>${title}</h2><button class="close-btn material-icons">close</button></div>` : '';
+            overlay.innerHTML = `${headerHtml}<div class="overlay-content">${content}</div>`;
+            openOverlay(id);
+        };
+
+        const setActiveNav = (activeBtn) => {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active-nav-item');
+                item.classList.add('text-gray-400');
+            });
+            if(activeBtn) {
+                activeBtn.classList.add('active-nav-item');
+                activeBtn.classList.remove('text-gray-400');
+            }
+        };
+
+        const getDownloadLinksHtml = (downloadUrls, content) => {
+            let linksHtml = '';
+            const cleanedName = cleanMovieTitle(safe(content.name));
+            ['480p', '720p', '1080p', '4k'].forEach(quality => {
+                if (downloadUrls?.[quality]) {
+                    // Yahan `download` attribute me file extension add kar sakte hain (e.g., .mp4)
+                    const filename = `${cleanedName} ${quality}.mp4`;
+                    linksHtml += `<a href="${downloadUrls[quality]}" class="quality-icon-btn" download="${filename}" data-movie-name="${cleanedName}" data-category="${safe(content.category)}"><span class="quality-label">${quality.toUpperCase()}</span><span class="material-icons">download_for_offline</span></a>`;
+                }
+            });
+            return linksHtml === '' ? '<p>No download links available.</p>' : linksHtml;
+        };
+
+        const showDetailsOverlay = (movieId) => {
+            const content = allContent.find(item => item.id === movieId);
+            if (!content) return alert("Content not found.");
+
+            const cleanedName = cleanMovieTitle(safe(content.name));
+            const detailsOverlay = document.getElementById('details-overlay');
+            const posterSrc = extractImageUrl(content.posterUrl);
+            let metaInfoHtml = '<div class="details-meta-info">';
+            const descriptionLines = [];
+            const knownMetaPrefixes = ["Genre:", "Duration:", "Release Date:", "Language:", "Starcast:", "Size:", "Description:"];
+
+            if (content.movieDetails) {
+                content.movieDetails.split('\n').forEach(line => {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) return;
+                    let isMeta = false;
+                    for (const prefix of knownMetaPrefixes) {
+                        if (trimmedLine.toLowerCase().startsWith(prefix.toLowerCase())) {
+                            const value = trimmedLine.substring(prefix.length).trim();
+                            if (prefix === "Description:") {
+                                descriptionLines.push(value);
+                            } else {
+                                metaInfoHtml += `<p><strong>${safe(prefix)}</strong> ${safe(value)}</p>`;
+                            }
+                            isMeta = true; break;
+                        }
+                    }
+                    if (!isMeta) descriptionLines.push(trimmedLine);
+                });
+            }
+            metaInfoHtml += '</div>';
+            const descriptionHtml = descriptionLines.length > 0 ? `<h3 class="details-section-title">Storyline</h3><p>${descriptionLines.join('<br>')}</p>` : '';
+            
+            let screenshotsHtml = '';
+            if (content.screenshots && content.screenshots.length > 0) {
+                const items = content.screenshots.map(item => (item || '').trim()).filter(Boolean).map(item => { const src = extractImageUrl(item); return src ? `<img src="${src}" alt="Screenshot" loading="lazy">` : ''; }).join('');
+                if(items) { screenshotsHtml = `<h3 class="details-section-title">Screenshots</h3><div class="screenshot-container">${items}</div>`; }
+            }
+            
+            let downloadsSectionHtml = '';
+            if ((content.type === 'Series' || content.type === 'Anime') && content.parts?.length > 0) {
+                const partButtonsHtml = content.parts.map((part, index) => `<button class="filter-btn part-btn ${index === 0 ? 'active-part' : ''} bg-gray-700 text-white p-2 rounded-lg" data-movie-id="${movieId}" data-part-index="${index}">${safe(part.name)}</button>`).join('');
+                const initialLinks = getDownloadLinksHtml(content.parts[0].downloadUrls || {}, content);
+                downloadsSectionHtml = `<h3 class="details-section-title">Parts / Episodes</h3><div class="flex flex-wrap gap-2">${partButtonsHtml}</div><div id="downloads-container" class="mt-4">${initialLinks}</div>`;
+            } else {
+                downloadsSectionHtml = `<h3 class="details-section-title">Download Links</h3><div id="downloads-container">${getDownloadLinksHtml(content.downloadUrls || {}, content)}</div>`;
+            }
+
+            detailsOverlay.innerHTML = `
+                <div class="overlay-header transparent" style="position: absolute; top: 0; left: 0; width: 100%; z-index: 10; background:transparent; border:none;">
+                    <button class="close-btn material-icons">arrow_back</button>
+                </div>
+                <div class="overlay-content" style="padding:0; background-color:#121217;">
+                    <div class="details-hero" style="background-image: url('${posterSrc}')"></div>
+                    <div class="details-main-content">
+                        <h2>${cleanedName}</h2>
+                        ${metaInfoHtml}
+                        ${descriptionHtml}
+                        ${screenshotsHtml}
+                        ${downloadsSectionHtml}
+                    </div>
+                </div>`;
+            openOverlay('details-overlay');
+        };
+
+        const showWatchlistOverlay = () => {
+             const watchlistContent = `
+                <div class="relative flex size-full flex-col bg-[#121217] justify-between">
+                  <div>
+                    <div class="flex items-center bg-[#121217] p-4 pb-2 justify-between">
+                      <button class="close-btn text-white flex size-12 shrink-0 items-center -ml-4" data-icon="ArrowLeft"><span class="material-icons text-3xl">arrow_back</span></button>
+                      <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">My List</h2>
+                      <div class="flex w-12 items-center justify-end"></div>
+                    </div>
+                    <div class="px-4 py-3">
+                      <label class="flex flex-col min-w-40 h-12 w-full">
+                        <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+                          <div class="text-[#a1a1b5] flex border-none bg-[#2b2b36] items-center justify-center pl-4 rounded-l-xl border-r-0" data-icon="MagnifyingGlass"><span class="material-icons">search</span></div>
+                          <input placeholder="Search My List" id="watchlist-search-input" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#2b2b36] focus:border-none h-full placeholder:text-[#a1a1b5] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" value=""/>
+                        </div>
+                      </label>
+                    </div>
+                    <div id="watchlist-grid-container" class="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4">
+                      <!-- Watchlist items will be injected here -->
+                    </div>
+                  </div>
+                </div>`;
+            
+            buildAndShowOverlay('watchlist-overlay', 'My List', watchlistContent, false);
+            
+            const watchlistIds = getWatchlist();
+            const watchlistItems = watchlistIds.map(id => allContent.find(c => c.id === id)).filter(Boolean);
+            const gridContainer = document.getElementById('watchlist-grid-container');
+            gridContainer.innerHTML = ''; 
+            
+            if (watchlistItems.length > 0) {
+                watchlistItems.forEach(item => {
+                    const posterSrc = extractImageUrl(item.posterUrl);
+                    const card = document.createElement('div');
+                    card.className = 'flex flex-col gap-2 pb-3 movie-card-watchlist';
+                    card.dataset.movieId = item.id;
+                    const cleanedName = cleanMovieTitle(safe(item.name));
+                    card.innerHTML = `
+                        <div class="w-full bg-center bg-no-repeat aspect-[3/4] bg-cover rounded-xl" style='background-image: url("${posterSrc}")'></div>
+                        <p class="text-white text-base font-medium leading-normal">${cleanedName}</p>`;
+                    gridContainer.appendChild(card);
+                });
+            } else {
+                 gridContainer.innerHTML = '<p class="col-span-full text-center text-gray-400 mt-8">Your watchlist is empty.</p>';
+            }
+        };
+
+        const handleNavAction = (action, element) => {
+            setActiveNav(element);
+            document.getElementById('app-container').classList.remove('hidden');
+            const allCategories = ["Bollywood", "Hollywood", "South", "Anime", "Korean", "Gujarati"];
+
+            if (action === 'home') buildHomepageFeed();
+            else if (action === 'movies') renderGridView('All Movies', allContent.filter(c => c.type === 'Movie'));
+            else if (action === 'series') renderGridView('All Series & Anime', allContent.filter(c => c.type === 'Series' || c.type === 'Anime'));
+            else if (action === 'categories') {
+                 const categoryButtons = allCategories.map(cat => `<button class="category-filter-btn bg-[#2b2b36] hover:bg-[var(--gradient-start)] text-white text-sm font-medium p-3 rounded-full" data-category="${cat}">${cat}</button>`).join('');
+                 renderGridView('Categories', []);
+                 mainContent.innerHTML += `<div class="flex flex-wrap gap-3 p-4">${categoryButtons}</div>`;
+            } else if (action === 'settings') {
+                const settingsContent = `
+                    <div class="settings-item" data-action="show-watchlist"><span class="material-icons">history</span><span>Watch History</span></div>
+                    <div class="settings-item" data-action="show-request"><span class="material-icons">add_to_queue</span><span>Request a Movie</span></div>
+                    <div class="settings-item" data-action="show-about"><span class="material-icons">info</span><span>About Us</span></div>
+                    <div class="settings-item" data-action="show-privacy"><span class="material-icons">privacy_tip</span><span>Privacy Policy</span></div>
+                    <div class="settings-item-static"><span class="material-icons">developer_mode</span><span>App Version: 3.0 (New Design)</span></div>`;
+                mainContent.innerHTML = `<h2 class="text-2xl font-semibold text-white mb-4">Settings</h2>${settingsContent}`;
+            }
+        };
+        
+        async function fetchAllData() {
+            try {
+                const contentQuery = query(collection(db, "movies"), orderBy('createdAt', 'desc'));
+                const contentSnap = await getDocs(contentQuery);
+                allContent = contentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                buildHomepageFeed();
+            } catch (error) { 
+                console.error("FETCH ERROR:", error); 
+                mainContent.innerHTML = `<div class="text-center p-12 text-gray-400">
+                    <span class="material-icons text-5xl text-[var(--gradient-start)]">wifi_off</span>
+                    <h2 class="text-white text-xl mt-4">Failed to load content</h2>
+                    <p>Please check your internet connection and try again.</p>
+                </div>`;
+            } finally {
+                document.getElementById('app-container').classList.remove('hidden');
+            }
+        }
+        
+        // --- Event Listeners ---
+        document.body.addEventListener('click', async (e) => {
+            const target = e.target;
+            
+            // --- [PROBLEM SOLVED HERE] --- START ---
+            // Naya code download button ke liye
+            const downloadBtn = target.closest('.quality-icon-btn');
+            if (downloadBtn) {
+                e.preventDefault(); // Default link behavior ko roko
+
+                // Analytics ke liye data get karo
+                const movieName = downloadBtn.dataset.movieName;
+                const category = downloadBtn.dataset.category;
+                const url = downloadBtn.href;
+                const filename = downloadBtn.getAttribute('download') || 'movie.mp4';
+
+                // Download event ko Firestore me log karo (bina download roke)
+                addDoc(collection(db, 'download_events'), {
+                    movieName: movieName,
+                    category: category,
+                    timestamp: serverTimestamp()
+                }).then(() => {
+                    console.log('Download event logged for:', movieName);
+                }).catch(err => {
+                    console.error("Failed to log download event:", err);
+                });
+
+                // File download karne ke liye robust tarika
+                try {
+                    console.log(`Attempting to download: ${filename} from ${url}`);
+                    const tempLink = document.createElement('a');
+                    tempLink.href = url;
+                    tempLink.setAttribute('download', filename);
+                    tempLink.style.display = 'none';
+                    document.body.appendChild(tempLink);
+                    
+                    tempLink.click();
+                    
+                    document.body.removeChild(tempLink);
+                    console.log('Download triggered.');
+                } catch (err) {
+                    console.error('Download failed:', err);
+                    // Agar direct click fail hota hai to fallback
+                    window.open(url, '_blank');
+                }
+                
+                return; // Aage ka code execute na ho isliye return
+            }
+            // --- [PROBLEM SOLVED HERE] --- END ---
+
+            if (target.closest('.close-btn')) { e.preventDefault(); history.back(); return; }
+            
+            const navItem = target.closest('.nav-item[data-action]');
+            if (navItem) { handleNavAction(navItem.dataset.action, navItem); return; }
+            
+            if (target.closest('#search-btn-top')) {
+                const searchContent = `<input type="text" id="search-input" placeholder="Search for anything..." class="w-full p-4 text-lg bg-[#2a2a2a] border border-[#444] rounded-lg text-white box-border"><div id="search-results-grid" class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4 mt-6"></div>`;
+                buildAndShowOverlay('search-overlay', 'Search', searchContent);
+                document.getElementById('search-input')?.focus();
+                return;
+            }
+
+            if (target.closest('#watchlist-btn-top')) {
+                showWatchlistOverlay();
+                return;
+            }
+            
+            const watchlistBtn = target.closest('.watchlist-btn');
+            if (watchlistBtn) {
+                e.stopPropagation(); // Important: prevent opening details
+                toggleWatchlist(watchlistBtn.dataset.movieId);
+                return;
+            }
+
+            const movieCard = target.closest('.movie-poster-container, .movie-card-watchlist');
+            if (movieCard) {
+                if (movieCard.closest('.overlay.show')) {
+                    history.back(); // close current overlay
+                    await new Promise(r => setTimeout(r, 50)); // wait for it to close
+                }
+                showDetailsOverlay(movieCard.dataset.movieId);
+                return;
+            }
+            
+            const categoryFilterBtn = target.closest('.category-filter-btn');
+            if (categoryFilterBtn) {
+                const category = categoryFilterBtn.dataset.category;
+                renderGridView(category, allContent.filter(c => c.category === category));
+                setActiveNav(null);
+                return;
+            }
+
+            const settingsItem = target.closest('.settings-item[data-action]');
+            if (settingsItem) {
+                const action = settingsItem.dataset.action;
+                if (action === 'show-watchlist') {
+                    showWatchlistOverlay();
+                } else if (action === 'show-about') {
+                    const aboutContent = `<p>MovieFly is your ultimate destination for discovering the latest and greatest in cinema. From blockbuster hits to indie gems, we bring the world of movies to your fingertips.</p><p>Our mission is to provide a seamless and enjoyable experience for all film lovers. Happy watching!</p>`;
+                    buildAndShowOverlay('about-overlay', 'About Us', aboutContent);
+                } else if (action === 'show-privacy') {
+                    const privacyContent = `<p>Your privacy is important to us. This policy outlines how we handle your data:</p><ol class="privacy-policy-list"><li><strong>Data Collection:</strong> We do not collect any personal identifiable information.</li><li><strong>Watch History:</strong> Your watch history is stored only on your device.</li><li><strong>Requests:</strong> Movie requests are sent anonymously.</li><li><strong>Analytics:</strong> We collect anonymous data to improve the app.</li></ol>`;
+                    buildAndShowOverlay('privacy-overlay', 'Privacy Policy', privacyContent);
+                } else if (action === 'show-request') {
+                    const requestContent = `<input type="text" id="request-movie-input" placeholder="Enter movie or series name" class="w-full p-4 text-base bg-[#2a2a2a] border border-[#444] rounded-lg text-white box-border mb-4"><button id="send-request-btn" class="w-full p-3 rounded-lg bg-[var(--gradient-start)] text-white font-bold">Send Request</button>`;
+                    buildAndShowOverlay('request-overlay', 'Request a Movie', requestContent);
+                }
+                return;
+            }
+        });
+        
+        document.body.addEventListener('input', e => {
+            if (e.target.id === 'search-input') {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                const resultsGrid = document.getElementById('search-results-grid');
+                if(!resultsGrid) return;
+
+                if (searchTerm.length > 1) {
+                    const filtered = allContent.filter(item => item.name.toLowerCase().includes(searchTerm));
+                    renderGridView("Search Results", filtered, resultsGrid);
+                } else {
+                    resultsGrid.innerHTML = '';
+                }
+            }
+            if (e.target.id === 'watchlist-search-input') {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                document.querySelectorAll('#watchlist-grid-container .movie-card-watchlist').forEach(card => {
+                    const name = card.querySelector('p').textContent.toLowerCase();
+                    card.style.display = name.includes(searchTerm) ? 'flex' : 'none';
+                });
+            }
+        });
+
+        document.body.addEventListener('mouseenter', e => {
+            const container = e.target.closest('.movie-poster-container');
+            if(container) container.querySelector('.movie-trailer')?.play().catch(()=>{});
+        }, true);
+        
+        document.body.addEventListener('mouseleave', e => {
+            const container = e.target.closest('.movie-poster-container');
+            if(container) {
+                const video = container.querySelector('.movie-trailer');
+                if(video) { video.pause(); video.currentTime = 0; }
+            }
+        }, true);
+        
+        // --- App Initialization ---
+        window.onload = async () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
+            const dataFetch = fetchAllData();
+            
+            await Promise.all([dataFetch, minDelay]);
+
+            splashScreen.classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
