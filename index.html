@@ -179,16 +179,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, getDoc, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-  apiKey: "AIzaSyBmT99II-FRxoojsS7PpIT90bc3b1jWy30",
-  authDomain: "ytfiretools.firebaseapp.com",
-  databaseURL: "https://ytfiretools-default-rtdb.firebaseio.com",
-  projectId: "ytfiretools",
-  storageBucket: "ytfiretools.firebasestorage.app",
-  messagingSenderId: "77097098449",
-  appId: "1:77097098449:web:0633dc8d5973eb4b9d79f0",
-  measurementId: "G-4XKD32HMWL"
-};
+        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -205,7 +196,16 @@
             if (list.includes(movieId)) {
                 list = list.filter(id => id !== movieId);
             } else {
-                list.unshift(movieId);
+               const firebaseConfig = {
+  apiKey: "AIzaSyA6HeuLNN_ebjAun0hzpMELyBlUD9__9cw",
+  authDomain: "okcredit-1.firebaseapp.com",
+  databaseURL: "https://okcredit-1-default-rtdb.firebaseio.com",
+  projectId: "okcredit-1",
+  storageBucket: "okcredit-1.firebasestorage.app",
+  messagingSenderId: "235292569466",
+  appId: "1:235292569466:web:19f8753bc42f5c8bc370c3",
+  measurementId: "G-MNLJXENP68"
+}; list.unshift(movieId);
             }
             localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list.slice(0, 100)));
             updateWatchlistIcons(movieId);
